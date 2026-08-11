@@ -12,7 +12,9 @@ from pathlib import Path
 
 block_cipher = None
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# PyInstaller ejecuta este .spec con exec(), sin `__file__` definido; usa la
+# variable `SPECPATH` que el propio PyInstaller inyecta en el namespace.
+PROJECT_ROOT = Path(SPECPATH).resolve().parent
 APP_DIR = PROJECT_ROOT / "app"
 
 a = Analysis(
@@ -20,7 +22,8 @@ a = Analysis(
     pathex=[str(PROJECT_ROOT)],
     binaries=[],
     datas=[
-        (str(APP_DIR / "resources"), "app/resources"),
+        (str(APP_DIR / "resources" / "style.qss"), "app/resources"),
+        (str(APP_DIR / "resources" / "icon.icns"), "app/resources"),
     ],
     hiddenimports=[
         "mlx_whisper",
@@ -73,7 +76,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name="Voz a Texto.app",
-    icon=None,  # TODO: apuntar a app/resources/icon.icns cuando exista
+    icon=str(APP_DIR / "resources" / "icon.icns"),
     bundle_identifier="com.joseluismacedo.vozatexto",
     info_plist={
         "CFBundleName": "Voz a Texto",

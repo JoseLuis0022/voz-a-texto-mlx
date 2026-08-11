@@ -6,6 +6,7 @@ import multiprocessing as mp
 import sys
 from pathlib import Path
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from app.core.model_manager import ModelManager
@@ -23,6 +24,10 @@ def main() -> int:
 
     app = QApplication(sys.argv)
     app.setApplicationName("Voz a Texto")
+
+    icon_path = RESOURCES_DIR / "icon.icns"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
 
     qss_path = RESOURCES_DIR / "style.qss"
     if qss_path.exists():

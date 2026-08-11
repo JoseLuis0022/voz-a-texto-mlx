@@ -35,5 +35,8 @@ dist/
 # Estado interno de herramientas de agente
 .claude/
 
+# Copia cruda del logo en la raíz (ya vive versionada en app/resources/logo_original.png)
+/ChatGPT Image*.png
+
 # Salidas de transcripción de prueba
 /tmp_output/
