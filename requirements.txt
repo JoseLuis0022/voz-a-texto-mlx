@@ -1,0 +1,7 @@
+PySide6>=6.7
+pyqtgraph>=0.13
+mlx-whisper>=0.4
+huggingface_hub>=0.24
+psutil>=6.0
+numpy>=1.26
+send2trash>=1.8

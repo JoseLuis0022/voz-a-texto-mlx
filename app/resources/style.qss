@@ -1,0 +1,135 @@
+/* Estilo minimalista, oscuro, orientado a datos */
+
+QWidget {
+    background-color: #1b1c1f;
+    color: #e6e6e6;
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+    font-size: 13px;
+}
+
+QMainWindow, QDialog {
+    background-color: #1b1c1f;
+}
+
+#panelTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+#sectionTitle {
+    font-size: 13px;
+    font-weight: 600;
+    color: #9fa3ad;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#hintLabel {
+    color: #8a8d94;
+    font-size: 11px;
+}
+
+QListWidget#sidebarList {
+    background-color: #17181a;
+    border: none;
+    padding: 8px;
+    outline: none;
+}
+
+QListWidget#sidebarList::item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+}
+
+QListWidget#sidebarList::item:selected {
+    background-color: #2c5df0;
+    color: white;
+}
+
+QListWidget#sidebarList::item:hover:!selected {
+    background-color: #26272b;
+}
+
+QTableWidget {
+    background-color: #1f2023;
+    gridline-color: #2c2d31;
+    border: 1px solid #2c2d31;
+    border-radius: 8px;
+}
+
+QHeaderView::section {
+    background-color: #1f2023;
+    color: #9fa3ad;
+    padding: 6px;
+    border: none;
+    border-bottom: 1px solid #2c2d31;
+}
+
+QProgressBar {
+    background-color: #2c2d31;
+    border-radius: 6px;
+    text-align: center;
+    height: 16px;
+    color: #e6e6e6;
+}
+
+QProgressBar::chunk {
+    background-color: #2c5df0;
+    border-radius: 6px;
+}
+
+QPushButton {
+    background-color: #2c2d31;
+    border: 1px solid #3a3b40;
+    border-radius: 6px;
+    padding: 6px 14px;
+}
+
+QPushButton:hover {
+    background-color: #34353a;
+}
+
+QPushButton:pressed {
+    background-color: #2c5df0;
+}
+
+QPushButton:disabled {
+    color: #6a6d73;
+}
+
+#statTile, #workerCard, #modelRow {
+    background-color: #1f2023;
+    border: 1px solid #2c2d31;
+    border-radius: 10px;
+}
+
+#statValue {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+#statTitle {
+    color: #8a8d94;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+#workerCardTitle, #modelName {
+    font-weight: 600;
+    color: #ffffff;
+}
+
+QLineEdit, QComboBox, QTextEdit {
+    background-color: #1f2023;
+    border: 1px solid #2c2d31;
+    border-radius: 6px;
+    padding: 5px 8px;
+}
+
+QSplitter::handle {
+    background-color: #2c2d31;
+}
