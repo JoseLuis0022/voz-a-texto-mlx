@@ -24,6 +24,7 @@ a = Analysis(
     datas=[
         (str(APP_DIR / "resources" / "style.qss"), "app/resources"),
         (str(APP_DIR / "resources" / "icon.icns"), "app/resources"),
+        (str(APP_DIR / "resources" / "fonts"), "app/resources/fonts"),
     ],
     hiddenimports=[
         "mlx_whisper",
