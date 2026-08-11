@@ -36,10 +36,19 @@ class PreferencesDialog(QDialog):
         super().__init__(parent)
         self.db = db
         self.setWindowTitle("Preferencias")
-        self.setMinimumWidth(420)
+        self.setMinimumWidth(440)
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(22, 20, 22, 18)
+        layout.setSpacing(16)
+
+        title = QLabel("Preferencias")
+        title.setObjectName("panelTitle")
+        layout.addWidget(title)
+
         form = QFormLayout()
+        form.setSpacing(12)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addLayout(form)
 
         # Límite de paralelismo
@@ -90,6 +99,8 @@ class PreferencesDialog(QDialog):
         form.addRow("Idioma por defecto:", self.language_combo)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Guardar")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

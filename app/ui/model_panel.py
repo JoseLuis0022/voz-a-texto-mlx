@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.model_manager import ModelInfo, ModelManager
+from app.ui.effects import apply_card_shadow
 
 
 class _DownloadThread(QThread):
@@ -44,13 +45,19 @@ class _ModelRow(QFrame):
         self.model_key = info.key
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 12, 14, 12)
-        layout.setSpacing(6)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(8)
 
         top = QHBoxLayout()
+        top.setSpacing(10)
         name = QLabel(info.key)
         name.setObjectName("modelName")
         top.addWidget(name)
+
+        self.badge = QLabel("DESCARGADO")
+        self.badge.setObjectName("modelBadge")
+        top.addWidget(self.badge)
+
         top.addStretch()
 
         self.size_label = QLabel(f"~{info.approx_size_mb} MB")
@@ -58,6 +65,7 @@ class _ModelRow(QFrame):
         top.addWidget(self.size_label)
 
         self.action_btn = QPushButton()
+        self.action_btn.setMinimumWidth(96)
         top.addWidget(self.action_btn)
         layout.addLayout(top)
 
@@ -72,11 +80,19 @@ class _ModelRow(QFrame):
 
         self.set_downloaded(info.downloaded)
         self.action_btn.clicked.connect(self._on_click)
+        apply_card_shadow(self, blur=16, y_offset=3, alpha=60)
+
+    def _set_button_variant(self, variant: str) -> None:
+        self.action_btn.setProperty("variant", variant)
+        self.action_btn.style().unpolish(self.action_btn)
+        self.action_btn.style().polish(self.action_btn)
 
     def set_downloaded(self, downloaded: bool) -> None:
         self._downloaded = downloaded
+        self.badge.setVisible(downloaded)
         self.action_btn.setText("Eliminar" if downloaded else "Descargar")
-        self.status_label.setText("Descargado, listo para usar" if downloaded else "No descargado")
+        self._set_button_variant("danger" if downloaded else "primary")
+        self.status_label.setText("Listo para usar" if downloaded else "No descargado")
         self.progress_bar.setVisible(False)
 
     def _on_click(self) -> None:
@@ -115,8 +131,12 @@ class ModelPanel(QWidget):
         self._rows: dict[str, _ModelRow] = {}
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(10)
+        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setSpacing(14)
+
+        kicker = QLabel("BIBLIOTECA")
+        kicker.setObjectName("panelKicker")
+        layout.addWidget(kicker)
 
         title = QLabel("Modelos")
         title.setObjectName("panelTitle")
@@ -125,6 +145,7 @@ class ModelPanel(QWidget):
         hint = QLabel("Descarga los modelos Whisper (formato MLX) que quieras usar para transcribir.")
         hint.setObjectName("hintLabel")
         layout.addWidget(hint)
+        layout.addSpacing(4)
 
         for info in self.model_manager.list_models():
             row = _ModelRow(info)
@@ -132,6 +153,7 @@ class ModelPanel(QWidget):
             row.delete_requested.connect(self._delete_model)
             self._rows[info.key] = row
             layout.addWidget(row)
+            layout.addSpacing(4)
 
         layout.addStretch()
 

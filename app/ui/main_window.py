@@ -5,13 +5,16 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QHBoxLayout,
+    QLabel,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QStackedWidget,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -24,7 +27,7 @@ from app.ui.preferences_dialog import PreferencesDialog
 from app.ui.queue_panel import QueuePanel
 from app.ui.results_panel import ResultsPanel
 
-NAV_ITEMS = ["Cola", "Panel", "Modelos", "Resultados"]
+NAV_ITEMS = ["🗂️  Cola", "📊  Panel", "📦  Modelos", "📝  Resultados"]
 
 
 class MainWindow(QMainWindow):
@@ -43,13 +46,51 @@ class MainWindow(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
+        sidebar_container = QWidget()
+        sidebar_container.setObjectName("sidebar")
+        sidebar_container.setFixedWidth(216)
+        sidebar_layout = QVBoxLayout(sidebar_container)
+        sidebar_layout.setContentsMargins(0, 0, 0, 0)
+        sidebar_layout.setSpacing(0)
+
+        brand_header = QWidget()
+        brand_header.setObjectName("brandHeader")
+        brand_header.setFixedHeight(64)
+        brand_layout = QHBoxLayout(brand_header)
+        brand_layout.setContentsMargins(16, 0, 12, 0)
+        brand_layout.setSpacing(9)
+
+        logo_label = QLabel()
+        icon_path = Path(__file__).resolve().parent.parent / "resources" / "icon.icns"
+        if icon_path.exists():
+            pixmap = QPixmap(str(icon_path))
+            if not pixmap.isNull():
+                logo_label.setPixmap(
+                    pixmap.scaled(30, 30, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                )
+        brand_layout.addWidget(logo_label)
+
+        brand_text = QVBoxLayout()
+        brand_text.setSpacing(0)
+        brand_title = QLabel("Voz a Texto")
+        brand_title.setObjectName("brandTitle")
+        brand_subtitle = QLabel("Transcripción local")
+        brand_subtitle.setObjectName("brandSubtitle")
+        brand_text.addWidget(brand_title)
+        brand_text.addWidget(brand_subtitle)
+        brand_layout.addLayout(brand_text)
+        brand_layout.addStretch()
+
+        sidebar_layout.addWidget(brand_header)
+
         self.sidebar = QListWidget()
         self.sidebar.setObjectName("sidebarList")
-        self.sidebar.setFixedWidth(180)
         for name in NAV_ITEMS:
             QListWidgetItem(name, self.sidebar)
         self.sidebar.currentRowChanged.connect(self._on_nav_changed)
-        root_layout.addWidget(self.sidebar)
+        sidebar_layout.addWidget(self.sidebar, stretch=1)
+
+        root_layout.addWidget(sidebar_container)
 
         self.stack = QStackedWidget()
         root_layout.addWidget(self.stack, stretch=1)

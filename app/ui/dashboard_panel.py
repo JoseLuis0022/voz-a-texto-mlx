@@ -6,6 +6,7 @@ import time
 
 import pyqtgraph as pg
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -16,22 +17,49 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-pg.setConfigOptions(antialias=True, background=None, foreground="#c9c9c9")
+from app.ui.effects import apply_card_shadow
+
+pg.setConfigOptions(antialias=True, background=None, foreground="#8a8f99")
+
+_AXIS_PEN = pg.mkPen("#2b2c34", width=1)
+_GRID_ALPHA = 0.12
+
+
+def _style_plot(plot: pg.PlotWidget) -> None:
+    """Look consistente para todas las gráficas del dashboard.
+
+    Se fija un color explícito (en vez de transparente): el QGraphicsView
+    interno de pyqtgraph cae a la paleta clara por defecto si se le deja
+    "None" y no hay stylesheet global forzando el fondo oscuro en QWidget.
+    """
+    plot.setObjectName("chartCard")
+    plot.setBackground("#1b1c22")
+    plot.showGrid(x=True, y=True, alpha=_GRID_ALPHA)
+    for axis_name in ("left", "bottom"):
+        axis = plot.getAxis(axis_name)
+        axis.setPen(_AXIS_PEN)
+        axis.setTextPen("#8a8f99")
+        tick_font = QFont("-apple-system", 10)
+        axis.setTickFont(tick_font)
+    plot.getPlotItem().titleLabel.item.setDefaultTextColor(pg.mkColor("#c7cad1"))
+    plot.setContentsMargins(0, 6, 12, 0)
 
 
 class _StatTile(QFrame):
     def __init__(self, title: str, parent=None):
         super().__init__(parent)
         self.setObjectName("statTile")
+        self.setMinimumHeight(78)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 10, 14, 10)
-        layout.setSpacing(2)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(4)
         self.value_label = QLabel("—")
         self.value_label.setObjectName("statValue")
         title_label = QLabel(title)
         title_label.setObjectName("statTitle")
         layout.addWidget(self.value_label)
         layout.addWidget(title_label)
+        apply_card_shadow(self, blur=18, y_offset=4, alpha=70)
 
     def set_value(self, text: str) -> None:
         self.value_label.setText(text)
@@ -42,8 +70,8 @@ class WorkerCard(QFrame):
         super().__init__(parent)
         self.setObjectName("workerCard")
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(4)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(5)
         self.title_label = QLabel("Instancia")
         self.title_label.setObjectName("workerCardTitle")
         self.file_label = QLabel("—")
@@ -52,6 +80,7 @@ class WorkerCard(QFrame):
         layout.addWidget(self.title_label)
         layout.addWidget(self.file_label)
         layout.addWidget(self.detail_label)
+        apply_card_shadow(self, blur=18, y_offset=4, alpha=70)
 
     def update_data(self, worker: dict) -> None:
         self.title_label.setText(f"Instancia #{worker['worker_id']} · {worker['model']}")
@@ -68,8 +97,12 @@ class DashboardPanel(QWidget):
         self._start_time = time.time()
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(14)
+        root.setContentsMargins(20, 18, 20, 18)
+        root.setSpacing(16)
+
+        kicker = QLabel("EN VIVO")
+        kicker.setObjectName("panelKicker")
+        root.addWidget(kicker)
 
         title = QLabel("Panel de rendimiento")
         title.setObjectName("panelTitle")
@@ -77,6 +110,7 @@ class DashboardPanel(QWidget):
 
         # --- fila de tarjetas resumen ---
         tiles_row = QHBoxLayout()
+        tiles_row.setSpacing(12)
         self.tile_ram = _StatTile("RAM en uso")
         self.tile_workers = _StatTile("Instancias activas")
         self.tile_queue = _StatTile("En cola")
@@ -87,16 +121,16 @@ class DashboardPanel(QWidget):
 
         # --- gráfica de RAM ---
         self.ram_plot = pg.PlotWidget(title="RAM del sistema (MB)")
-        self.ram_plot.showGrid(x=True, y=True, alpha=0.15)
-        self.ram_plot.addLegend(offset=(10, 10))
-        self.ram_used_curve = self.ram_plot.plot(pen=pg.mkPen("#5b8def", width=2), name="Usada")
-        self.ram_avail_curve = self.ram_plot.plot(pen=pg.mkPen("#39c98f", width=2), name="Disponible")
+        _style_plot(self.ram_plot)
+        self.ram_plot.addLegend(offset=(10, 10), brush=pg.mkBrush("#1b1c22"), pen=pg.mkPen("#2b2c34"), labelTextColor="#c7cad1")
+        self.ram_used_curve = self.ram_plot.plot(pen=pg.mkPen("#3b82f6", width=2), name="Usada")
+        self.ram_avail_curve = self.ram_plot.plot(pen=pg.mkPen("#34d399", width=2), name="Disponible")
         root.addWidget(self.ram_plot, stretch=2)
 
         # --- gráfica de throughput ---
         self.throughput_plot = pg.PlotWidget(title="Throughput acumulado (segundos de audio transcritos)")
-        self.throughput_plot.showGrid(x=True, y=True, alpha=0.15)
-        self.throughput_curve = self.throughput_plot.plot(pen=pg.mkPen("#e0a75e", width=2))
+        _style_plot(self.throughput_plot)
+        self.throughput_curve = self.throughput_plot.plot(pen=pg.mkPen("#f0b459", width=2))
         root.addWidget(self.throughput_plot, stretch=2)
 
         # --- tarjetas de instancias activas ---
@@ -106,7 +140,7 @@ class DashboardPanel(QWidget):
 
         self.workers_container = QWidget()
         self.workers_layout = QGridLayout(self.workers_container)
-        self.workers_layout.setSpacing(10)
+        self.workers_layout.setSpacing(12)
         root.addWidget(self.workers_container, stretch=1)
 
         self._worker_cards: dict[int, WorkerCard] = {}

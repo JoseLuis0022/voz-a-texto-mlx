@@ -8,6 +8,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -28,41 +29,58 @@ class ResultsPanel(QWidget):
         self._job_by_item_id: dict[int, Job] = {}
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(10)
+        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setSpacing(14)
+
+        kicker = QLabel("ARCHIVO")
+        kicker.setObjectName("panelKicker")
+        layout.addWidget(kicker)
 
         title = QLabel("Resultados")
         title.setObjectName("panelTitle")
         layout.addWidget(title)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
 
         self.list_widget = QListWidget()
+        self.list_widget.setMinimumWidth(220)
+        self.list_widget.setMaximumWidth(320)
         self.list_widget.currentItemChanged.connect(self._on_selection_changed)
         splitter.addWidget(self.list_widget)
 
         right = QWidget()
         right_layout = QVBoxLayout(right)
         right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(10)
 
-        self.meta_label = QLabel("Selecciona un resultado")
+        self.meta_card = QFrame()
+        self.meta_card.setObjectName("statTile")
+        meta_layout = QVBoxLayout(self.meta_card)
+        meta_layout.setContentsMargins(14, 10, 14, 10)
+        self.meta_label = QLabel("Selecciona un resultado para ver sus detalles")
         self.meta_label.setObjectName("hintLabel")
-        right_layout.addWidget(self.meta_label)
+        self.meta_label.setWordWrap(True)
+        meta_layout.addWidget(self.meta_label)
+        right_layout.addWidget(self.meta_card)
 
         self.preview = QTextEdit()
         self.preview.setReadOnly(True)
+        self.preview.setPlaceholderText("El texto transcrito aparecerá aquí…")
         right_layout.addWidget(self.preview)
 
         actions = QHBoxLayout()
         self.reveal_btn = QPushButton("Mostrar en Finder")
+        self.reveal_btn.setProperty("variant", "ghost")
         self.reveal_btn.clicked.connect(self._reveal_current)
         actions.addWidget(self.reveal_btn)
         actions.addStretch()
         right_layout.addLayout(actions)
 
         splitter.addWidget(right)
-        splitter.setStretchFactor(1, 2)
-        layout.addWidget(splitter)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        layout.addWidget(splitter, stretch=1)
 
     def refresh(self, jobs: list[Job]) -> None:
         self.list_widget.clear()

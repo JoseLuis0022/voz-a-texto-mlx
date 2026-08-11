@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QProgressBar,
     QPushButton,
+    QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -36,6 +37,31 @@ STATUS_LABELS = {
 COLUMNS = ["Archivo", "Modelo", "Estado", "Progreso", "Velocidad", "Duración", ""]
 
 
+class _EmptyState(QWidget):
+    """Placeholder mostrado cuando la cola está vacía."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setSpacing(6)
+
+        icon = QLabel("🎙️")
+        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon.setStyleSheet("font-size: 40px;")
+        layout.addWidget(icon)
+
+        title = QLabel("Sin archivos en cola")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setObjectName("sectionTitle")
+        layout.addWidget(title)
+
+        subtitle = QLabel("Arrastra audio o vídeo aquí para empezar a transcribir")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setObjectName("hintLabel")
+        layout.addWidget(subtitle)
+
+
 class QueuePanel(QWidget):
     files_dropped = Signal(list)      # list[Path]
     add_files_requested = Signal(list, str)  # list[Path], model_key
@@ -48,22 +74,30 @@ class QueuePanel(QWidget):
         self._job_row: dict[int, int] = {}
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(10)
+        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setSpacing(14)
+
+        kicker = QLabel("TRANSCRIPCIÓN")
+        kicker.setObjectName("panelKicker")
+        layout.addWidget(kicker)
 
         header = QHBoxLayout()
+        header.setSpacing(10)
         title = QLabel("Cola de trabajo")
         title.setObjectName("panelTitle")
         header.addWidget(title)
         header.addStretch()
 
         model_label = QLabel("Modelo:")
+        model_label.setObjectName("hintLabel")
         header.addWidget(model_label)
         self.model_combo = QComboBox()
         self.model_combo.addItems(available_models)
+        self.model_combo.setMinimumWidth(150)
         header.addWidget(self.model_combo)
 
-        add_btn = QPushButton("Añadir archivos…")
+        add_btn = QPushButton("＋ Añadir archivos…")
+        add_btn.setProperty("variant", "primary")
         add_btn.clicked.connect(self._pick_files)
         header.addWidget(add_btn)
         layout.addLayout(header)
@@ -73,6 +107,7 @@ class QueuePanel(QWidget):
             "El modelo elegido arriba se usará para todo lo que encoles a continuación."
         )
         hint.setObjectName("hintLabel")
+        hint.setWordWrap(True)
         layout.addWidget(hint)
 
         self.table = QTableWidget(0, len(COLUMNS))
@@ -80,10 +115,28 @@ class QueuePanel(QWidget):
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.table.setAlternatingRowColors(True)
+        self.table.setShowGrid(False)
+        self.table.verticalHeader().setDefaultSectionSize(34)
+        header_view = self.table.horizontalHeader()
+        header_view.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         for col in range(1, len(COLUMNS)):
-            self.table.horizontalHeader().setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
-        layout.addWidget(self.table)
+            header_view.setSectionResizeMode(col, QHeaderView.ResizeMode.Fixed)
+        # ResizeToContents no mide bien los QWidget insertados con setCellWidget
+        # (progreso, botones de acción) — se fijan anchos explícitos generosos.
+        self.table.setColumnWidth(1, 130)  # Modelo
+        self.table.setColumnWidth(2, 110)  # Estado
+        self.table.setColumnWidth(3, 130)  # Progreso
+        self.table.setColumnWidth(4, 90)   # Velocidad
+        self.table.setColumnWidth(5, 90)   # Duración
+        self.table.setColumnWidth(6, 100)  # Acciones
+
+        self._empty_state = _EmptyState()
+
+        self.content_stack = QStackedWidget()
+        self.content_stack.addWidget(self._empty_state)  # índice 0
+        self.content_stack.addWidget(self.table)          # índice 1
+        layout.addWidget(self.content_stack, stretch=1)
 
     # ---- drag & drop ----
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
@@ -118,13 +171,18 @@ class QueuePanel(QWidget):
         self._job_row.clear()
         for job in jobs:
             self._insert_row(job)
+        self._sync_empty_state()
 
     def update_job(self, job: Job) -> None:
         row = self._job_row.get(job.id)
         if row is None:
             self._insert_row(job)
+            self._sync_empty_state()
             return
         self._fill_row(row, job)
+
+    def _sync_empty_state(self) -> None:
+        self.content_stack.setCurrentIndex(1 if self.table.rowCount() else 0)
 
     def _insert_row(self, job: Job) -> None:
         row = self.table.rowCount()
@@ -151,17 +209,22 @@ class QueuePanel(QWidget):
 
         actions = QWidget()
         h = QHBoxLayout(actions)
-        h.setContentsMargins(0, 0, 0, 0)
+        h.setContentsMargins(4, 2, 4, 2)
         if job.status == "pending":
             btn = QPushButton("Quitar")
+            btn.setProperty("variant", "tableAction")
             btn.clicked.connect(lambda: self.cancel_requested.emit(job.id))
             h.addWidget(btn)
         elif job.status == "done":
             btn = QPushButton("Abrir")
+            btn.setProperty("variant", "tableAction")
             btn.clicked.connect(lambda: self.open_result_requested.emit(job.id))
             h.addWidget(btn)
         elif job.status == "error":
-            lbl = QLabel(job.error_message or "Error")
-            lbl.setToolTip(job.error_message or "")
+            full_message = job.error_message or "Error"
+            short_message = full_message if len(full_message) <= 16 else full_message[:14] + "…"
+            lbl = QLabel(short_message)
+            lbl.setObjectName("errorLabel")
+            lbl.setToolTip(full_message)
             h.addWidget(lbl)
         self.table.setCellWidget(row, 6, actions)
