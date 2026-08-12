@@ -15,9 +15,11 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from app.core.model_manager import ModelManager
 from app.core.scheduler import WorkerPoolScheduler
 from app.data.db import Database
+from app.paths import resources_dir
 from app.ui.main_window import MainWindow
 
-RESOURCES_DIR = Path(__file__).parent / "resources"
+
+RESOURCES_DIR = resources_dir()
 
 # Nombre único para el canal local usado como candado de instancia única.
 _SINGLE_INSTANCE_KEY = "VozATexto-instancia-unica"

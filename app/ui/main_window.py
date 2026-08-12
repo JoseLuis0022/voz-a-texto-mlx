@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from app.core.model_manager import MODEL_REPOS, ModelManager
 from app.core.scheduler import WorkerPoolScheduler
 from app.data.db import Database
+from app.paths import resources_dir
 from app.ui.dashboard_panel import DashboardPanel
 from app.ui.icons import icon
 from app.ui.model_panel import ModelPanel
@@ -71,7 +72,7 @@ class MainWindow(QMainWindow):
         brand_layout.setSpacing(9)
 
         logo_label = QLabel()
-        icon_path = Path(__file__).resolve().parent.parent / "resources" / "icon.icns"
+        icon_path = resources_dir() / "icon.icns"
         if icon_path.exists():
             pixmap = QPixmap(str(icon_path))
             if not pixmap.isNull():
