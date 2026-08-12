@@ -21,11 +21,11 @@ from app.ui.effects import apply_card_shadow
 
 pg.setConfigOptions(antialias=True, background=None, foreground="#6B7280")
 
-# Colores a juego con el frontend de referencia (Farmora — tema "menta").
+# Colores a juego con el frontend de referencia (Farmora — preset "azul_clinico").
 _AXIS_PEN = pg.mkPen((0, 0, 0, 25), width=1)
 _GRID_ALPHA = 0.06
 _CARD_BG = "#ffffff"
-_PRIMARY = "#A3C614"
+_PRIMARY = "#2563EB"
 _SUCCESS = "#16A34A"
 _WARNING = "#D97706"
 

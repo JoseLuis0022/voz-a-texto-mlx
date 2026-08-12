@@ -72,7 +72,7 @@ class MainWindow(QMainWindow):
 
         brand_text = QVBoxLayout()
         brand_text.setSpacing(0)
-        brand_title = QLabel('Voz a Texto<span style="color:#A3C614;">.</span>')
+        brand_title = QLabel('Voz a Texto<span style="color:#2563EB;">.</span>')
         brand_title.setTextFormat(Qt.TextFormat.RichText)
         brand_title.setObjectName("brandTitle")
         brand_subtitle = QLabel("Transcripción local")
