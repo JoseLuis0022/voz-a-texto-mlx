@@ -20,6 +20,16 @@ from typing import Optional
 
 from app.core.media_types import VIDEO_EXTENSIONS
 
+# Cuando la app corre como .app empaquetado y se abre con doble clic desde
+# Finder (o LaunchServices en general), el proceso hereda un PATH mínimo que
+# no incluye Homebrew — así que "ffmpeg" no se encuentra aunque esté
+# instalado. Se completa el PATH con las rutas típicas de Homebrew (Apple
+# Silicon e Intel) antes de que este proceso hijo invoque ffmpeg, sea
+# directamente (_extract_audio) o indirectamente (mlx_whisper.audio.load_audio).
+for _extra_bin_dir in ("/opt/homebrew/bin", "/usr/local/bin"):
+    if _extra_bin_dir not in os.environ.get("PATH", "").split(os.pathsep):
+        os.environ["PATH"] = _extra_bin_dir + os.pathsep + os.environ.get("PATH", "")
+
 # Mensajes que este worker manda por progress_queue:
 #   ("model_loaded", worker_id, model_key)
 #   ("progress", worker_id, job_id, fraction, elapsed_seconds)

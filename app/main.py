@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import multiprocessing as mp
+import signal
 import sys
 from pathlib import Path
 
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFontDatabase, QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMessageBox
@@ -107,6 +109,32 @@ def main() -> int:
 
     model_manager = ModelManager()
     scheduler = WorkerPoolScheduler(db, model_manager)
+
+    # BUG que causaba procesos worker huérfanos (cada uno con un modelo Whisper
+    # cargado en RAM) acumulándose en segundo plano en cada cierre de la app:
+    # nunca se llamaba a scheduler.shutdown(). aboutToQuit es la señal de Qt
+    # que sí dispara siempre que la app termina de forma normal (Cmd+Q, cerrar
+    # la ventana, menú Salir), así que es el único punto de salida que
+    # necesitamos cubrir para el caso normal.
+    app.aboutToQuit.connect(scheduler.shutdown)
+
+    # Caso "cierre sucio" (kill/pkill/Activity Monitor -> Salir forzado, que
+    # manda SIGTERM): sin este handler, Python simplemente muere sin correr
+    # aboutToQuit y los workers quedan huérfanos igual. Se traduce la señal a
+    # un app.quit() normal para que pase por el mismo camino de limpieza.
+    def _handle_termination(signum, frame) -> None:  # noqa: ANN001
+        app.quit()
+
+    signal.signal(signal.SIGTERM, _handle_termination)
+    signal.signal(signal.SIGINT, _handle_termination)
+
+    # Python solo entrega señales entre instrucciones del intérprete; el loop
+    # de eventos de Qt es un bucle C++ que no le cede el control salvo que
+    # haya algo Python-side despertando periódicamente. Este timer no-op es
+    # el truco estándar para que SIGTERM/SIGINT no se queden "atorados".
+    signal_pump = QTimer()
+    signal_pump.timeout.connect(lambda: None)
+    signal_pump.start(200)
 
     window = MainWindow(db, model_manager, scheduler)
     window.show()
