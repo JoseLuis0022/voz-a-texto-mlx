@@ -209,11 +209,17 @@ class WorkerPoolScheduler(QObject):
             self._assign_idle_workers(pending)
             return
 
-        available_mb = psutil.virtual_memory().available / (1024 * 1024)
-        needed_mb = self._ram_reserved_per_worker_mb() + self._ram_safety_margin_mb()
-        if available_mb < needed_mb:
-            self._assign_idle_workers(pending)
-            return
+        # El primer worker SIEMPRE se permite, sin importar la RAM disponible:
+        # bloquear incluso la primera transcripción dejaría la app "atascada"
+        # sin explicación visible para el usuario. El margen de seguridad de
+        # RAM solo se aplica a partir de la 2ª instancia en paralelo, para no
+        # sobre-comprometer memoria una vez que ya hay algo corriendo.
+        if active_count > 0:
+            available_mb = psutil.virtual_memory().available / (1024 * 1024)
+            needed_mb = self._ram_reserved_per_worker_mb() + self._ram_safety_margin_mb()
+            if available_mb < needed_mb:
+                self._assign_idle_workers(pending)
+                return
 
         # Hay RAM y cupo: primero intenta reusar un worker idle con el mismo modelo,
         # si no, lanza uno nuevo.

@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS settings (
 DEFAULT_SETTINGS = {
     "max_parallel": "3",
     "ram_reserved_per_worker_mb": "2200",
-    "ram_safety_margin_mb": "1500",
+    "ram_safety_margin_mb": "800",
     "output_dir": str(Path.home() / "Documents" / "Transcripciones"),
     "default_model": "large-v3-turbo",
     "language": "es",
