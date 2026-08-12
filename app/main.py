@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 from PySide6.QtGui import QFontDatabase, QIcon
-from PySide6.QtWidgets import QApplication
+from PySide6.QtNetwork import QLocalServer, QLocalSocket
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from app.core.model_manager import ModelManager
 from app.core.scheduler import WorkerPoolScheduler
@@ -15,6 +16,32 @@ from app.data.db import Database
 from app.ui.main_window import MainWindow
 
 RESOURCES_DIR = Path(__file__).parent / "resources"
+
+# Nombre único para el canal local usado como candado de instancia única.
+_SINGLE_INSTANCE_KEY = "VozATexto-instancia-unica"
+
+
+def _acquire_single_instance_lock() -> QLocalServer | None:
+    """Garantiza que solo haya una instancia de la app corriendo a la vez.
+
+    Intenta conectarse como cliente a un servidor local existente: si lo
+    logra, ya hay una instancia abierta y devolvemos None. Si no, esta
+    instancia se convierte en el servidor y devuelve el QLocalServer (hay
+    que mantener la referencia viva mientras la app corre).
+    """
+    socket = QLocalSocket()
+    socket.connectToServer(_SINGLE_INSTANCE_KEY)
+    if socket.waitForConnected(200):
+        socket.disconnectFromServer()
+        return None
+
+    # No había servidor: puede que quedara un socket huérfano de un cierre
+    # anterior en falso (crash). Lo removemos antes de escuchar.
+    QLocalServer.removeServer(_SINGLE_INSTANCE_KEY)
+
+    server = QLocalServer()
+    server.listen(_SINGLE_INSTANCE_KEY)
+    return server
 
 # Tipografía de marca: Inter (la misma que usa el frontend de Farmora, la
 # referencia de diseño). Se embebe como .woff2 por peso (Qt 6 puede cargar
@@ -53,6 +80,15 @@ def main() -> int:
 
     app = QApplication(sys.argv)
     app.setApplicationName("Voz a Texto")
+
+    lock_server = _acquire_single_instance_lock()
+    if lock_server is None:
+        QMessageBox.information(
+            None,
+            "Voz a Texto",
+            "Voz a Texto ya está abierto.",
+        )
+        return 0
 
     icon_path = RESOURCES_DIR / "icon.icns"
     if icon_path.exists():

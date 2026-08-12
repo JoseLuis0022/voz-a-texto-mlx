@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -22,12 +22,22 @@ from app.core.model_manager import MODEL_REPOS, ModelManager
 from app.core.scheduler import WorkerPoolScheduler
 from app.data.db import Database
 from app.ui.dashboard_panel import DashboardPanel
+from app.ui.icons import icon
 from app.ui.model_panel import ModelPanel
 from app.ui.preferences_dialog import PreferencesDialog
 from app.ui.queue_panel import QueuePanel
 from app.ui.results_panel import ResultsPanel
 
-NAV_ITEMS = ["🗂️  Cola", "📊  Panel", "📦  Modelos", "📝  Resultados"]
+# (clave de icono, etiqueta)
+NAV_ITEMS = [
+    ("queue", "Cola"),
+    ("dashboard", "Panel"),
+    ("models", "Modelos"),
+    ("results", "Resultados"),
+]
+
+_NAV_ICON_COLOR = "#64748B"      # mismo tono que QListWidget#sidebarList::item
+_NAV_ICON_COLOR_ACTIVE = "#1D4ED8"  # mismo tono que ::item:selected
 
 
 class MainWindow(QMainWindow):
@@ -86,8 +96,9 @@ class MainWindow(QMainWindow):
 
         self.sidebar = QListWidget()
         self.sidebar.setObjectName("sidebarList")
-        for name in NAV_ITEMS:
-            QListWidgetItem(name, self.sidebar)
+        self.sidebar.setIconSize(QSize(18, 18))
+        for key, label in NAV_ITEMS:
+            QListWidgetItem(icon(key, _NAV_ICON_COLOR), label, self.sidebar)
         self.sidebar.currentRowChanged.connect(self._on_nav_changed)
         sidebar_layout.addWidget(self.sidebar, stretch=1)
 
@@ -134,6 +145,9 @@ class MainWindow(QMainWindow):
 
     def _on_nav_changed(self, row: int) -> None:
         self.stack.setCurrentIndex(row)
+        for i, (key, _label) in enumerate(NAV_ITEMS):
+            color = _NAV_ICON_COLOR_ACTIVE if i == row else _NAV_ICON_COLOR
+            self.sidebar.item(i).setIcon(icon(key, color))
 
     def _add_files(self, paths: list[Path], model_key: str) -> None:
         if not self.model_manager.is_downloaded(model_key):

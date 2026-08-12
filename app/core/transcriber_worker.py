@@ -9,11 +9,16 @@ apaga enviando None a task_queue.
 from __future__ import annotations
 
 import multiprocessing as mp
+import os
+import subprocess
+import tempfile
 import time
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+
+from app.core.media_types import VIDEO_EXTENSIONS
 
 # Mensajes que este worker manda por progress_queue:
 #   ("model_loaded", worker_id, model_key)
@@ -36,6 +41,36 @@ def _get_audio_duration(path: str) -> float:
 
     audio = load_audio(path)
     return len(audio) / SAMPLE_RATE
+
+
+def _extract_audio(source_path: str) -> str:
+    """Extrae solo la pista de audio de un archivo de vídeo a un .wav temporal
+    de 16kHz mono (el formato que espera Whisper).
+
+    Se hace una sola vez por job y ese .wav se reutiliza tanto para medir la
+    duración como para transcribir, en vez de dejar que Whisper desmuxe el
+    contenedor de vídeo dos veces por su cuenta. El vídeo en sí nunca se
+    decodifica: ffmpeg descarta la pista de vídeo (-vn) sin tocarla.
+    """
+    fd, tmp_path = tempfile.mkstemp(suffix=".wav", prefix="voz_a_texto_audio_")
+    os.close(fd)
+    cmd = [
+        "ffmpeg", "-y", "-nostdin", "-i", source_path,
+        "-vn", "-ac", "1", "-ar", "16000", "-acodec", "pcm_s16le",
+        tmp_path,
+    ]
+    try:
+        subprocess.run(cmd, capture_output=True, check=True)
+    except FileNotFoundError as e:
+        os.unlink(tmp_path)
+        raise RuntimeError(
+            "ffmpeg no está instalado o no está en el PATH; hace falta para procesar vídeos."
+        ) from e
+    except subprocess.CalledProcessError as e:
+        os.unlink(tmp_path)
+        stderr = e.stderr.decode("utf-8", errors="ignore") if e.stderr else ""
+        raise RuntimeError(f"No se pudo extraer el audio del vídeo: {stderr[-500:]}") from e
+    return tmp_path
 
 
 def worker_main(
@@ -63,8 +98,15 @@ def worker_main(
             break  # señal de apagado
 
         start = time.time()
+        extracted_audio_path: Optional[str] = None
         try:
-            duration = _get_audio_duration(task.source_path)
+            is_video = Path(task.source_path).suffix.lower() in VIDEO_EXTENSIONS
+            audio_path = task.source_path
+            if is_video:
+                extracted_audio_path = _extract_audio(task.source_path)
+                audio_path = extracted_audio_path
+
+            duration = _get_audio_duration(audio_path)
             progress_queue.put(("duration", worker_id, task.job_id, duration))
 
             # mlx_whisper.transcribe no soporta callback de progreso nativo: es una
@@ -75,7 +117,7 @@ def worker_main(
             progress_queue.put(("progress", worker_id, task.job_id, 0.02, 0.0))
 
             result = mlx_whisper.transcribe(
-                task.source_path,
+                audio_path,
                 path_or_hf_repo=model_dir,
                 language=task.language,
                 word_timestamps=False,
@@ -88,5 +130,9 @@ def worker_main(
         except Exception as e:
             err = f"{e}\n{traceback.format_exc()}"
             progress_queue.put(("error", worker_id, task.job_id, err))
+
+        finally:
+            if extracted_audio_path:
+                Path(extracted_audio_path).unlink(missing_ok=True)
 
         progress_queue.put(("idle", worker_id))

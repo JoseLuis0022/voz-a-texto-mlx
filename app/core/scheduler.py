@@ -93,11 +93,34 @@ class WorkerPoolScheduler(QObject):
         job = self.db.get_job(job_id)
         if not job:
             return
-        if job.status == "pending":
+        if job.status == "running":
+            self._kill_running_job(job_id)
+        else:
+            # pending: se saca de la cola. done/error/canceled: se elimina
+            # del historial.
             self.db.delete_job(job_id)
             self.jobs_changed.emit()
-        # Si ya está corriendo, se deja terminar (matar un proceso a mitad de
-        # transcripción no vale la pena para archivos individuales cortos).
+
+    def _kill_running_job(self, job_id: int) -> None:
+        """Cancela un job en curso matando el proceso worker que lo tiene
+        asignado. mlx_whisper.transcribe() es una llamada bloqueante sin
+        gancho de cancelación cooperativa, así que la única forma real de
+        interrumpirla a mitad de camino es terminar el proceso del sistema
+        operativo. El worker se pierde (recarga el modelo la próxima vez que
+        se necesite), pero eso es preferible a dejar corriendo algo que el
+        usuario ya no quiere."""
+        worker = next((w for w in self._workers.values() if w.current_job_id == job_id), None)
+        if worker is not None:
+            worker.process.terminate()
+            worker.process.join(timeout=3.0)
+            if worker.process.is_alive():
+                worker.process.kill()
+                worker.process.join(timeout=1.0)
+            del self._workers[worker.worker_id]
+
+        self.db.update_job(job_id, status="canceled", finished_at=time.time())
+        self.job_updated.emit(job_id)
+        self.jobs_changed.emit()
 
     # ---------------- lógica interna ----------------
 

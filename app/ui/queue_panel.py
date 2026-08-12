@@ -22,9 +22,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.media_types import MEDIA_EXTENSIONS
 from app.data.db import Job
-
-AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".mp4", ".mov", ".flac", ".ogg", ".webm", ".aac"}
+from app.ui.icons import icon_pixmap
 
 STATUS_LABELS = {
     "pending": "En cola",
@@ -46,10 +46,10 @@ class _EmptyState(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(6)
 
-        icon = QLabel("🎙️")
-        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon.setStyleSheet("font-size: 40px;")
-        layout.addWidget(icon)
+        icon_label = QLabel()
+        icon_label.setPixmap(icon_pixmap("mic", color="#CBD5E1", size=40))
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(icon_label)
 
         title = QLabel("Sin archivos en cola")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -129,7 +129,7 @@ class QueuePanel(QWidget):
         self.table.setColumnWidth(3, 130)  # Progreso
         self.table.setColumnWidth(4, 90)   # Velocidad
         self.table.setColumnWidth(5, 90)   # Duración
-        self.table.setColumnWidth(6, 100)  # Acciones
+        self.table.setColumnWidth(6, 160)  # Acciones
 
         self._empty_state = _EmptyState()
 
@@ -148,14 +148,14 @@ class QueuePanel(QWidget):
         for url in event.mimeData().urls():
             p = Path(url.toLocalFile())
             if p.is_dir():
-                paths.extend(sorted(f for f in p.rglob("*") if f.suffix.lower() in AUDIO_EXTENSIONS))
-            elif p.suffix.lower() in AUDIO_EXTENSIONS:
+                paths.extend(sorted(f for f in p.rglob("*") if f.suffix.lower() in MEDIA_EXTENSIONS))
+            elif p.suffix.lower() in MEDIA_EXTENSIONS:
                 paths.append(p)
         if paths:
             self.add_files_requested.emit(paths, self.model_combo.currentText())
 
     def _pick_files(self) -> None:
-        exts = " ".join(f"*{e}" for e in AUDIO_EXTENSIONS)
+        exts = " ".join(f"*{e}" for e in MEDIA_EXTENSIONS)
         files, _ = QFileDialog.getOpenFileNames(self, "Selecciona archivos de audio/vídeo", "", f"Audio/Vídeo ({exts})")
         if files:
             self.add_files_requested.emit([Path(f) for f in files], self.model_combo.currentText())
@@ -215,16 +215,30 @@ class QueuePanel(QWidget):
             btn.setProperty("variant", "tableAction")
             btn.clicked.connect(lambda: self.cancel_requested.emit(job.id))
             h.addWidget(btn)
-        elif job.status == "done":
-            btn = QPushButton("Abrir")
+        elif job.status == "running":
+            btn = QPushButton("Cancelar")
             btn.setProperty("variant", "tableAction")
-            btn.clicked.connect(lambda: self.open_result_requested.emit(job.id))
+            btn.clicked.connect(lambda: self.cancel_requested.emit(job.id))
             h.addWidget(btn)
-        elif job.status == "error":
-            full_message = job.error_message or "Error"
-            short_message = full_message if len(full_message) <= 16 else full_message[:14] + "…"
-            lbl = QLabel(short_message)
-            lbl.setObjectName("errorLabel")
-            lbl.setToolTip(full_message)
-            h.addWidget(lbl)
+        elif job.status == "done":
+            open_btn = QPushButton("Abrir")
+            open_btn.setProperty("variant", "tableAction")
+            open_btn.clicked.connect(lambda: self.open_result_requested.emit(job.id))
+            h.addWidget(open_btn)
+            del_btn = QPushButton("Eliminar")
+            del_btn.setProperty("variant", "tableAction")
+            del_btn.clicked.connect(lambda: self.cancel_requested.emit(job.id))
+            h.addWidget(del_btn)
+        elif job.status in ("error", "canceled"):
+            if job.status == "error":
+                full_message = job.error_message or "Error"
+                short_message = full_message if len(full_message) <= 16 else full_message[:14] + "…"
+                lbl = QLabel(short_message)
+                lbl.setObjectName("errorLabel")
+                lbl.setToolTip(full_message)
+                h.addWidget(lbl)
+            del_btn = QPushButton("Eliminar")
+            del_btn.setProperty("variant", "tableAction")
+            del_btn.clicked.connect(lambda: self.cancel_requested.emit(job.id))
+            h.addWidget(del_btn)
         self.table.setCellWidget(row, 6, actions)
