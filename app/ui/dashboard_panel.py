@@ -19,16 +19,15 @@ from PySide6.QtWidgets import (
 
 from app.ui.effects import apply_card_shadow
 
-pg.setConfigOptions(antialias=True, background=None, foreground="#9a9a9a")
+pg.setConfigOptions(antialias=True, background=None, foreground="#6B7280")
 
-# Colores a juego con la Guía de Diseño (negro cálido + dorado de marca).
-_AXIS_PEN = pg.mkPen((255, 255, 255, 18), width=1)
-_GRID_ALPHA = 0.10
-_CARD_BG = "#1A1A1A"
-_GOLD = "#E0AC35"
-_GOLD_LIGHT = "#F0C84A"
-_SUCCESS = "#2FA96A"
-_COPPER = "#D98C4A"
+# Colores a juego con el frontend de referencia (Farmora — tema "menta").
+_AXIS_PEN = pg.mkPen((0, 0, 0, 25), width=1)
+_GRID_ALPHA = 0.06
+_CARD_BG = "#ffffff"
+_PRIMARY = "#A3C614"
+_SUCCESS = "#16A34A"
+_WARNING = "#D97706"
 
 
 def _style_plot(plot: pg.PlotWidget) -> None:
@@ -36,7 +35,7 @@ def _style_plot(plot: pg.PlotWidget) -> None:
 
     Se fija un color explícito (en vez de transparente): el QGraphicsView
     interno de pyqtgraph cae a la paleta clara por defecto si se le deja
-    "None" y no hay stylesheet global forzando el fondo oscuro en QWidget.
+    "None" y no hay stylesheet global forzando el fondo en QWidget.
     """
     plot.setObjectName("chartCard")
     plot.setBackground(_CARD_BG)
@@ -44,10 +43,10 @@ def _style_plot(plot: pg.PlotWidget) -> None:
     for axis_name in ("left", "bottom"):
         axis = plot.getAxis(axis_name)
         axis.setPen(_AXIS_PEN)
-        axis.setTextPen((255, 255, 255, 120))
-        tick_font = QFont("DM Sans", 10)
+        axis.setTextPen((107, 114, 128, 255))
+        tick_font = QFont("Inter", 10)
         axis.setTickFont(tick_font)
-    plot.getPlotItem().titleLabel.item.setDefaultTextColor(pg.mkColor("#E8E8E8"))
+    plot.getPlotItem().titleLabel.item.setDefaultTextColor(pg.mkColor("#1F2937"))
     plot.setContentsMargins(0, 6, 12, 0)
 
 
@@ -128,15 +127,15 @@ class DashboardPanel(QWidget):
         # --- gráfica de RAM ---
         self.ram_plot = pg.PlotWidget(title="RAM del sistema (MB)")
         _style_plot(self.ram_plot)
-        self.ram_plot.addLegend(offset=(10, 10), brush=pg.mkBrush(_CARD_BG), pen=pg.mkPen((255, 255, 255, 18)), labelTextColor="#E8E8E8")
-        self.ram_used_curve = self.ram_plot.plot(pen=pg.mkPen(_GOLD, width=2), name="Usada")
+        self.ram_plot.addLegend(offset=(10, 10), brush=pg.mkBrush(_CARD_BG), pen=pg.mkPen((0, 0, 0, 25)), labelTextColor="#1F2937")
+        self.ram_used_curve = self.ram_plot.plot(pen=pg.mkPen(_PRIMARY, width=2), name="Usada")
         self.ram_avail_curve = self.ram_plot.plot(pen=pg.mkPen(_SUCCESS, width=2), name="Disponible")
         root.addWidget(self.ram_plot, stretch=2)
 
         # --- gráfica de throughput ---
         self.throughput_plot = pg.PlotWidget(title="Throughput acumulado (segundos de audio transcritos)")
         _style_plot(self.throughput_plot)
-        self.throughput_curve = self.throughput_plot.plot(pen=pg.mkPen(_COPPER, width=2))
+        self.throughput_curve = self.throughput_plot.plot(pen=pg.mkPen(_WARNING, width=2))
         root.addWidget(self.throughput_plot, stretch=2)
 
         # --- tarjetas de instancias activas ---

@@ -16,25 +16,22 @@ from app.ui.main_window import MainWindow
 
 RESOURCES_DIR = Path(__file__).parent / "resources"
 
-# Tipografía de marca (ver Guía de Diseño): DM Sans. Se embebe como .woff2 por
-# peso (Qt 6 puede cargar woff2 vía FreeType) en vez de depender de que el
-# usuario la tenga instalada o de una CDN.
+# Tipografía de marca: Inter (la misma que usa el frontend de Farmora, la
+# referencia de diseño). Se embebe como .woff2 por peso (Qt 6 puede cargar
+# woff2 vía FreeType) en vez de depender de que el usuario la tenga instalada.
 FONT_FILES = [
-    "DMSans-Light.woff2",
-    "DMSans-Regular.woff2",
-    "DMSans-Medium.woff2",
-    "DMSans-SemiBold.woff2",
-    "DMSans-Bold.woff2",
-    "DMSans-ExtraBold.woff2",
+    "Inter-Regular.woff2",
+    "Inter-Medium.woff2",
+    "Inter-SemiBold.woff2",
+    "Inter-Bold.woff2",
 ]
 
 
 def _load_brand_font() -> str:
-    """Carga los pesos de DM Sans embebidos y devuelve el nombre de familia
-    real que Qt les asignó (puede diferir del nombre "DM Sans" nominal, p. ej.
-    "DM Sans 9pt" al provenir de una instancia con eje óptico). Si algo falla,
-    devuelve "DM Sans" tal cual — el QSS ya trae fallbacks al stack del sistema."""
-    resolved_family = "DM Sans"
+    """Carga los pesos de Inter embebidos y devuelve el nombre de familia real
+    que Qt les asignó. Si algo falla, devuelve "Inter" tal cual — el QSS ya
+    trae fallbacks al stack del sistema."""
+    resolved_family = "Inter"
     fonts_dir = RESOURCES_DIR / "fonts"
     for filename in FONT_FILES:
         path = fonts_dir / filename
@@ -66,7 +63,7 @@ def main() -> int:
     qss_path = RESOURCES_DIR / "style.qss"
     if qss_path.exists():
         qss = qss_path.read_text(encoding="utf-8")
-        qss = qss.replace('"DM Sans"', f'"{brand_font_family}"')
+        qss = qss.replace('"Inter"', f'"{brand_font_family}"')
         app.setStyleSheet(qss)
 
     db = Database()
